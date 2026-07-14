@@ -156,15 +156,20 @@ function parsePropertyText(text) {
           property.notes = (property.notes ? property.notes + ' | ' : '') + notes;
         }
         if (phones.length > 1) {
-          const extra = contactStr.substring(contactStr.indexOf(phones[1])).trim();
-          property.notes = (property.notes ? property.notes + ' | ' : '') + extra;
+          const extra = contactStr.substring(contactStr.indexOf(phones[1]) + phones[1].length).trim();
+          if (extra) {
+            property.notes = (property.notes ? property.notes + ' | ' : '') + extra;
+          }
         }
       } else if (/^0\d{9,10}/.test(line)) {
         const phoneMatch = line.match(/(0\d{9,10})/);
         if (phoneMatch && !property.contact_phone) {
           property.contact_phone = phoneMatch[1];
         }
-        property.notes = (property.notes ? property.notes + ' | ' : '') + line;
+        const afterPhone = line.substring(line.indexOf(phoneMatch[1]) + phoneMatch[1].length).trim();
+        if (afterPhone) {
+          property.notes = (property.notes ? property.notes + ' | ' : '') + afterPhone;
+        }
       } else if (/^\(.*\)$/.test(line)) {
         property.notes = (property.notes ? property.notes + ' | ' : '') + line;
       } else if (!property.address) {
