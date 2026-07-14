@@ -7,12 +7,12 @@ export default defineConfig({
     port: 3000,
     proxy: {
       '/api': {
-        target: 'https://bds-group3-ppt.onrender.com',
+        target: 'https://bds-wxc4.onrender.com',
         changeOrigin: true,
         secure: false
       },
       '/uploads': {
-        target: 'https://bds-group3-ppt.onrender.com',
+        target: 'https://bds-wxc4.onrender.com',
         changeOrigin: true,
         secure: false
       }
