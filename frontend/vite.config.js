@@ -10,11 +10,6 @@ export default defineConfig({
         target: 'https://bds-wxc4.onrender.com',
         changeOrigin: true,
         secure: false
-      },
-      '/uploads': {
-        target: 'https://bds-wxc4.onrender.com',
-        changeOrigin: true,
-        secure: false
       }
     }
   }

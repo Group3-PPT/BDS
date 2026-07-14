@@ -5,10 +5,6 @@
       "destination": "https://bds-wxc4.onrender.com/api/:path*"
     },
     {
-      "source": "/uploads/:path*",
-      "destination": "https://bds-wxc4.onrender.com/uploads/:path*"
-    },
-    {
       "source": "/((?!assets/|.*\\..*).*)",
       "destination": "/index.html"
     }

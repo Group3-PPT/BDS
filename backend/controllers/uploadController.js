@@ -20,11 +20,14 @@ export const uploadImages = async (req, res) => {
     });
     const isFirst = existing.rows[0].count === 0;
 
-    const images = req.files.map((file, idx) => ({
-      property_id: pid,
-      image_url: `/uploads/${file.filename}`,
-      is_thumbnail: (isFirst && idx === 0) || is_thumbnail === 'true' ? 1 : 0
-    }));
+    const images = req.files.map((file, idx) => {
+      const base64 = `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
+      return {
+        property_id: pid,
+        image_url: base64,
+        is_thumbnail: (isFirst && idx === 0) || is_thumbnail === 'true' ? 1 : 0
+      };
+    });
 
     if (is_thumbnail === 'true') {
       await db.execute({
