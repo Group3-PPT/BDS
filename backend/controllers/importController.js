@@ -91,6 +91,10 @@ function parsePropertyText(text) {
             property.description = (property.description ? property.description + ' | ' : '') + hhMatch[0].trim();
           }
         }
+        const cocMatch = priceStr.match(/c[oọ]c[:\s]*([\w\d\s]+)/i);
+        if (cocMatch) {
+          property.notes = (property.notes ? property.notes + ' | ' : '') + cocMatch[0].trim();
+        }
         if (lower.includes('usd') || lower.includes('$')) {
           property.currency = 'USD';
           const numMatch = priceStr.match(/([\d.,]+)/);
