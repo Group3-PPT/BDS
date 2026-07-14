@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { FiArrowLeft, FiUpload, FiX } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import { getPropertyById, createProperty, updateProperty, uploadImages, deleteImage, setThumbnail } from '../services/api';
+import { compressImage } from '../utils/compressImage';
 
 const DISTRICTS = [
   'Quận 1', 'Quận 2', 'Quận 3', 'Quận 4', 'Quận 5', 'Quận 6', 'Quận 7',
@@ -113,7 +114,10 @@ export default function PropertyForm() {
     setUploading(true);
     try {
       const formData = new FormData();
-      files.forEach(f => formData.append('images', f));
+      for (const f of files) {
+        const compressed = await compressImage(f, 800, 0.6);
+        formData.append('images', compressed);
+      }
       formData.append('property_id', id);
       if (images.length === 0) {
         formData.append('is_thumbnail', 'true');

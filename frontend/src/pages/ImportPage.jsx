@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { FiArrowLeft, FiCheck, FiTrash2, FiUpload, FiImage, FiPlus, FiX } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import { previewImport, confirmImport, uploadImages } from '../services/api';
+import { compressImage } from '../utils/compressImage';
 
 const SAMPLE = `68 Nguyễn Hữu Cảnh, QBT
 Diện tích: 4 x 12m
@@ -58,7 +59,10 @@ export default function ImportPage() {
         if (item.imageFiles && item.imageFiles.length > 0 && propertyIds[i]) {
           const formData = new FormData();
           formData.append('property_id', propertyIds[i]);
-          item.imageFiles.forEach(f => formData.append('images', f));
+          for (const f of item.imageFiles) {
+            const compressed = await compressImage(f, 800, 0.6);
+            formData.append('images', compressed);
+          }
           try {
             await uploadImages(formData);
           } catch (e) {
