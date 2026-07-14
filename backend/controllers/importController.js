@@ -75,12 +75,21 @@ function parsePropertyText(text) {
       } else if (lower.startsWith('giá:') || lower.startsWith('gia:')) {
         const priceStr = line.split(':').slice(1).join(':').trim();
         const noteMatch = priceStr.match(/\((.*?)\)/);
+        let hhFromParen = false;
         if (noteMatch) {
-          property.notes = noteMatch[1].trim();
+          const noteContent = noteMatch[1].trim();
+          if (/^hh|^hoa\s*hồng/i.test(noteContent)) {
+            property.description = (property.description ? property.description + ' | ' : '') + noteContent;
+            hhFromParen = true;
+          } else {
+            property.notes = noteContent;
+          }
         }
-        const cocMatch = priceStr.match(/c[oọ]c\s*([\w\d]+)/i);
-        if (cocMatch) {
-          property.notes = (property.notes ? property.notes + ' | ' : '') + cocMatch[0].trim();
+        if (!hhFromParen) {
+          const hhMatch = priceStr.match(/hh[:\s]*([\w\d\s]+)/i);
+          if (hhMatch) {
+            property.description = (property.description ? property.description + ' | ' : '') + hhMatch[0].trim();
+          }
         }
         if (lower.includes('usd') || lower.includes('$')) {
           property.currency = 'USD';
@@ -101,7 +110,7 @@ function parsePropertyText(text) {
         }
       } else if (lower.startsWith('hh:') || lower.startsWith('hoa hồng:')) {
         const hhStr = line.split(':').slice(1).join(':').trim();
-        property.notes = (property.notes ? property.notes + ' | ' : '') + 'HH: ' + hhStr;
+        property.description = (property.description ? property.description + ' | ' : '') + 'HH: ' + hhStr;
       } else if (lower.startsWith('cọc:') || lower.startsWith('coc:')) {
         const cocStr = line.split(':').slice(1).join(':').trim();
         property.notes = (property.notes ? property.notes + ' | ' : '') + 'Cọc: ' + cocStr;
