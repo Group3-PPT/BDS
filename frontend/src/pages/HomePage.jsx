@@ -338,6 +338,9 @@ export default function HomePage() {
                       {formatPrice(p.price, p.currency)}
                       {p.notes && <span className="text-xs text-gray-400 font-normal ml-1">({p.notes})</span>}
                     </span>
+                    {p.description && (
+                      <span className="text-xs text-orange-500 ml-1">{p.description}</span>
+                    )}
                     {p.structure && (
                       <span className="text-xs text-gray-400">{p.structure}</span>
                     )}
