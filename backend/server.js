@@ -32,17 +32,31 @@ const initDB = async () => {
       width REAL,
       length REAL,
       area REAL,
+      usable_area REAL,
       structure TEXT,
-      listing_type TEXT DEFAULT 'rent' CHECK(listing_type IN ('rent','sale')),
+      floors INTEGER,
+      bedrooms INTEGER,
+      bathrooms INTEGER,
+      property_type TEXT,
+      listing_type TEXT DEFAULT 'rent',
       price REAL NOT NULL,
-      currency TEXT DEFAULT 'VND' CHECK(currency IN ('VND','USD')),
+      currency TEXT DEFAULT 'VND',
+      price_unit TEXT DEFAULT 'month',
+      price_display TEXT,
+      deposit TEXT,
+      commission TEXT,
       description TEXT,
       contact_name TEXT,
       contact_phone TEXT,
+      manager_name TEXT,
+      manager_phone TEXT,
+      source TEXT,
+      business_type TEXT,
+      restriction TEXT,
       latitude REAL,
       longitude REAL,
       notes TEXT,
-      status TEXT DEFAULT 'available' CHECK(status IN ('available','rented','sold')),
+      status TEXT DEFAULT 'available',
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
@@ -64,9 +78,24 @@ const initDB = async () => {
   await db.execute('CREATE INDEX IF NOT EXISTS idx_properties_price ON properties(price)');
   await db.execute('CREATE INDEX IF NOT EXISTS idx_properties_area ON properties(area)');
   await db.execute('CREATE INDEX IF NOT EXISTS idx_properties_status ON properties(status)');
+  await db.execute('CREATE INDEX IF NOT EXISTS idx_properties_property_type ON properties(property_type)');
   await db.execute('CREATE INDEX IF NOT EXISTS idx_property_images_property_id ON property_images(property_id)');
 
-  const alterCols = [
+  const newCols = [
+    "ALTER TABLE properties ADD COLUMN usable_area REAL",
+    "ALTER TABLE properties ADD COLUMN floors INTEGER",
+    "ALTER TABLE properties ADD COLUMN bedrooms INTEGER",
+    "ALTER TABLE properties ADD COLUMN bathrooms INTEGER",
+    "ALTER TABLE properties ADD COLUMN property_type TEXT",
+    "ALTER TABLE properties ADD COLUMN price_unit TEXT DEFAULT 'month'",
+    "ALTER TABLE properties ADD COLUMN price_display TEXT",
+    "ALTER TABLE properties ADD COLUMN deposit TEXT",
+    "ALTER TABLE properties ADD COLUMN commission TEXT",
+    "ALTER TABLE properties ADD COLUMN manager_name TEXT",
+    "ALTER TABLE properties ADD COLUMN manager_phone TEXT",
+    "ALTER TABLE properties ADD COLUMN source TEXT",
+    "ALTER TABLE properties ADD COLUMN business_type TEXT",
+    "ALTER TABLE properties ADD COLUMN restriction TEXT",
     "ALTER TABLE properties ADD COLUMN title TEXT NOT NULL DEFAULT ''",
     "ALTER TABLE properties ADD COLUMN description TEXT",
     "ALTER TABLE properties ADD COLUMN latitude REAL",
@@ -75,7 +104,7 @@ const initDB = async () => {
     "ALTER TABLE properties ADD COLUMN status TEXT DEFAULT 'available'",
     "ALTER TABLE properties ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP"
   ];
-  for (const sql of alterCols) {
+  for (const sql of newCols) {
     try { await db.execute(sql); } catch {}
   }
 

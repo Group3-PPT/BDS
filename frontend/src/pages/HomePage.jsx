@@ -308,20 +308,27 @@ export default function HomePage() {
                 <div className="p-4">
                   <div className="flex items-center gap-2 mb-2">
                     <span className={`px-2 py-0.5 text-xs font-medium rounded ${
-                      p.listing_type === 'sale'
-                        ? 'bg-red-100 text-red-700'
-                        : 'bg-green-100 text-green-700'
+                      p.listing_type === 'sale' ? 'bg-red-100 text-red-700' :
+                      p.listing_type === 'transfer' ? 'bg-purple-100 text-purple-700' :
+                      'bg-green-100 text-green-700'
                     }`}>
-                      {p.listing_type === 'sale' ? 'Bán' : 'Cho thuê'}
+                      {p.listing_type === 'sale' ? 'Bán' : p.listing_type === 'transfer' ? 'Sang nhượng' : 'Cho thuê'}
                     </span>
                     <span className={`px-2 py-0.5 text-xs font-medium rounded ${
                       p.status === 'rented' ? 'bg-orange-100 text-orange-700' :
                       p.status === 'sold' ? 'bg-gray-100 text-gray-700' :
+                      p.status === 'holding' ? 'bg-yellow-100 text-yellow-700' :
+                      p.status === 'hidden' ? 'bg-gray-200 text-gray-500' :
                       'bg-blue-100 text-blue-700'
                     }`}>
                       {p.status === 'rented' ? 'Đã cho thuê' :
-                       p.status === 'sold' ? 'Đã bán' : 'Đang cho thuê'}
+                       p.status === 'sold' ? 'Đã bán' :
+                       p.status === 'holding' ? 'Đang giữ' :
+                       p.status === 'hidden' ? 'Ẩn' : 'Đang cho thuê'}
                     </span>
+                    {p.property_type && (
+                      <span className="text-xs text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">{p.property_type}</span>
+                    )}
                     {p.area && (
                       <span className="text-xs text-gray-500">{p.area} m²</span>
                     )}
@@ -333,17 +340,15 @@ export default function HomePage() {
                     <FiMapPin size={14} />
                     <span className="line-clamp-1">{p.address}, {p.district}</span>
                   </div>
-                  <div className="mt-3 flex items-center justify-between">
+                  <div className="mt-3">
                     <span className="text-lg font-bold text-blue-600">
                       {formatPrice(p.price, p.currency)}
-                      {p.notes && <span className="text-xs text-gray-400 font-normal ml-1">({p.notes})</span>}
                     </span>
-                    {p.description && (
-                      <span className="text-xs text-orange-500 ml-1">{p.description}</span>
-                    )}
-                    {p.structure && (
-                      <span className="text-xs text-gray-400">{p.structure}</span>
-                    )}
+                    <div className="flex flex-wrap gap-2 mt-1 text-xs text-gray-500">
+                      {p.deposit && <span>Cọc: {p.deposit}</span>}
+                      {p.commission && <span className="text-orange-500">HH: {p.commission}</span>}
+                      {p.structure && <span>{p.structure}</span>}
+                    </div>
                   </div>
                 </div>
               </Link>

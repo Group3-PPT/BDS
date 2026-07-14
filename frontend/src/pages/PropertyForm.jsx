@@ -13,25 +13,28 @@ const DISTRICTS = [
   'Bình Chánh', 'Hóc Môn', 'Củ Chi', 'Nhà Bè'
 ];
 
+const PROPERTY_TYPES = ['Mặt bằng', 'Nhà phố', 'Văn phòng', 'Showroom', 'Kho xưởng', 'Sang nhượng'];
+const BUSINESS_TYPES = ['Văn phòng', 'Showroom', 'Spa', 'Cafe', 'Nhà hàng'];
+const SOURCES = ['Zalo', 'Facebook', 'Nhập tay'];
+const STATUSES = [
+  { value: 'available', label: 'Đang cho thuê' },
+  { value: 'holding', label: 'Đang giữ' },
+  { value: 'rented', label: 'Đã cho thuê' },
+  { value: 'sold', label: 'Đã bán' },
+  { value: 'hidden', label: 'Ẩn' },
+];
+
 const DEFAULT_FORM = {
-  title: '',
-  address: '',
-  district: '',
-  city: 'TP.HCM',
-  width: '',
-  length: '',
-  area: '',
-  structure: '',
-  listing_type: 'rent',
-  price: '',
-  currency: 'VND',
-  notes: '',
-  status: 'available',
-  description: '',
-  contact_name: '',
-  contact_phone: '',
-  latitude: '',
-  longitude: ''
+  title: '', address: '', district: '', city: 'TP.HCM',
+  width: '', length: '', area: '', usable_area: '',
+  structure: '', floors: '', bedrooms: '', bathrooms: '',
+  property_type: '', listing_type: 'rent',
+  price: '', currency: 'VND', price_unit: 'month', price_display: '',
+  deposit: '', commission: '',
+  description: '', contact_name: '', contact_phone: '',
+  manager_name: '', manager_phone: '',
+  source: '', business_type: '', restriction: '',
+  latitude: '', longitude: '', notes: '', status: 'available',
 };
 
 export default function PropertyForm() {
@@ -48,26 +51,11 @@ export default function PropertyForm() {
       const fetchData = async () => {
         try {
           const { data } = await getPropertyById(id);
-          setForm({
-            title: data.title || '',
-            address: data.address || '',
-            district: data.district || '',
-            city: data.city || 'TP.HCM',
-            width: data.width || '',
-            length: data.length || '',
-            area: data.area || '',
-            structure: data.structure || '',
-            listing_type: data.listing_type || 'rent',
-            price: data.price || '',
-            currency: data.currency || 'VND',
-            notes: data.notes || '',
-            status: data.status || 'available',
-            description: data.description || '',
-            contact_name: data.contact_name || '',
-            contact_phone: data.contact_phone || '',
-            latitude: data.latitude || '',
-            longitude: data.longitude || ''
-          });
+          const f = {};
+          for (const key of Object.keys(DEFAULT_FORM)) {
+            f[key] = data[key] ?? DEFAULT_FORM[key];
+          }
+          setForm(f);
           setImages(data.images || []);
         } catch (error) {
           toast.error('Lỗi khi tải dữ liệu');
@@ -89,7 +77,6 @@ export default function PropertyForm() {
       toast.error('Vui lòng điền đầy đủ thông tin bắt buộc');
       return;
     }
-
     setSaving(true);
     try {
       if (isEdit) {
@@ -111,7 +98,6 @@ export default function PropertyForm() {
   const handleImageUpload = async (e) => {
     const files = Array.from(e.target.files);
     if (files.length === 0) return;
-
     setUploading(true);
     try {
       const uploadedUrls = [];
@@ -147,10 +133,7 @@ export default function PropertyForm() {
   const handleSetThumbnail = async (imageId) => {
     try {
       await setThumbnail({ image_id: imageId, property_id: id });
-      setImages(imgs => imgs.map(i => ({
-        ...i,
-        is_thumbnail: i.id === imageId
-      })));
+      setImages(imgs => imgs.map(i => ({ ...i, is_thumbnail: i.id === imageId })));
       toast.success('Đã đặt làm ảnh đại diện');
     } catch (error) {
       toast.error('Thất bại');
@@ -159,261 +142,137 @@ export default function PropertyForm() {
 
   const calculateArea = () => {
     if (form.width && form.length) {
-      const area = Number(form.width) * Number(form.length);
-      setForm(f => ({ ...f, area: area.toString() }));
+      setForm(f => ({ ...f, area: (Number(f.width) * Number(f.length)).toString() }));
     }
   };
+
+  const Input = ({ label, name, type = 'text', step, placeholder, required }) => (
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1">{label}{required && ' *'}</label>
+      <input type={type} name={name} value={form[name]} onChange={handleChange} step={step} placeholder={placeholder} required={required}
+        className="w-full border border-gray-300 rounded-lg px-3 py-2" />
+    </div>
+  );
+
+  const Select = ({ label, name, options }) => (
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+      <select name={name} value={form[name]} onChange={handleChange}
+        className="w-full border border-gray-300 rounded-lg px-3 py-2">
+        <option value="">Chọn...</option>
+        {options.map(o => <option key={typeof o === 'string' ? o : o.value} value={typeof o === 'string' ? o : o.value}>{typeof o === 'string' ? o : o.label}</option>)}
+      </select>
+    </div>
+  );
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-6">
       <Link to="/admin" className="inline-flex items-center gap-2 text-gray-600 hover:text-blue-600 mb-4">
         <FiArrowLeft /> Quay lại
       </Link>
-
       <h1 className="text-2xl font-bold text-gray-800 mb-6">
         {isEdit ? 'Chỉnh sửa bất động sản' : 'Thêm bất động sản mới'}
       </h1>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Basic Info */}
+        {/* Thông tin tin đăng */}
         <div className="bg-white rounded-lg p-6 shadow-sm">
-          <h2 className="text-lg font-semibold mb-4">Thông tin cơ bản</h2>
+          <h2 className="text-lg font-semibold mb-4">Thông tin tin đăng</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Tiêu đề *</label>
-              <input
-                type="text"
-                name="title"
-                value={form.title}
-                onChange={handleChange}
-                required
-                className="w-full border border-gray-300 rounded-lg px-3 py-2"
-                placeholder="VD: Nhà phố Lê Văn Sỹ"
-              />
+              <Input label="Tiêu đề" name="title" required placeholder="VD: 42 Mê Linh, P19, QBT" />
             </div>
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Địa chỉ *</label>
-              <input
-                type="text"
-                name="address"
-                value={form.address}
-                onChange={handleChange}
-                required
-                className="w-full border border-gray-300 rounded-lg px-3 py-2"
-                placeholder="VD: 123 Lê Văn Sỹ"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Quận</label>
-              <select
-                name="district"
-                value={form.district}
-                onChange={handleChange}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2"
-              >
-                <option value="">Chọn quận</option>
-                {DISTRICTS.map(d => <option key={d} value={d}>{d}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Thành phố</label>
-              <input
-                type="text"
-                name="city"
-                value={form.city}
-                onChange={handleChange}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2"
-              />
-            </div>
+            <Input label="Địa chỉ" name="address" required placeholder="VD: 42 Mê Linh" />
+            <Select label="Quận/Huyện" name="district" options={DISTRICTS} />
+            <Input label="Thành phố" name="city" />
+            <Select label="Loại hình" name="property_type" options={PROPERTY_TYPES} />
+            <Select label="Hình thức" name="listing_type" options={[{ value: 'rent', label: 'Cho thuê' }, { value: 'sale', label: 'Bán' }, { value: 'transfer', label: 'Sang nhượng' }]} />
+            <Select label="Nguồn" name="source" options={SOURCES} />
           </div>
         </div>
 
-        {/* Size & Structure */}
+        {/* Diện tích & Kết cấu */}
         <div className="bg-white rounded-lg p-6 shadow-sm">
-          <h2 className="text-lg font-semibold mb-4">Kích thước & Kết cấu</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Rộng (m)</label>
-              <input
-                type="number"
-                name="width"
-                value={form.width}
-                onChange={(e) => { handleChange(e); setTimeout(calculateArea, 0); }}
-                step="0.01"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Dài (m)</label>
-              <input
-                type="number"
-                name="length"
-                value={form.length}
-                onChange={(e) => { handleChange(e); setTimeout(calculateArea, 0); }}
-                step="0.01"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Diện tích (m²)</label>
-              <input
-                type="number"
-                name="area"
-                value={form.area}
-                onChange={handleChange}
-                step="0.01"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2"
-              />
-            </div>
+          <h2 className="text-lg font-semibold mb-4">Diện tích & Kết cấu</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <Input label="Ngang (m)" name="width" type="number" step="0.01" />
+            <Input label="Dài (m)" name="length" type="number" step="0.01" />
+            <Input label="DT đất (m²)" name="area" type="number" step="0.01" />
+            <Input label="DT sử dụng (m²)" name="usable_area" type="number" step="0.01" />
+            <Input label="Số tầng" name="floors" type="number" />
+            <Input label="Số phòng" name="bedrooms" type="number" />
+            <Input label="Số WC" name="bathrooms" type="number" />
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Kết cấu</label>
-              <input
-                type="text"
-                name="structure"
-                value={form.structure}
-                onChange={handleChange}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2"
-                placeholder="VD: 1 trệt 2 lầu"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Loại *</label>
-              <select
-                name="listing_type"
-                value={form.listing_type}
-                onChange={handleChange}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2"
-              >
-                <option value="rent">Cho thuê</option>
-                <option value="sale">Bán</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Trạng thái</label>
-              <select
-                name="status"
-                value={form.status}
-                onChange={handleChange}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2"
-              >
-                <option value="available">Đang cho thuê</option>
-                <option value="rented">Đã cho thuê</option>
-                <option value="sold">Đã bán</option>
-              </select>
+              <input type="text" name="structure" value={form.structure} onChange={handleChange}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2" placeholder="VD: Trệt 1 Lầu" />
             </div>
           </div>
         </div>
 
-        {/* Price */}
+        {/* Giá giao dịch */}
         <div className="bg-white rounded-lg p-6 shadow-sm">
-          <h2 className="text-lg font-semibold mb-4">Giá</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Giá *</label>
-              <input
-                type="number"
-                name="price"
-                value={form.price}
-                onChange={handleChange}
-                required
-                className="w-full border border-gray-300 rounded-lg px-3 py-2"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Đơn vị</label>
-              <select
-                name="currency"
-                value={form.currency}
-                onChange={handleChange}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2"
-              >
-                <option value="VND">VND</option>
-                <option value="USD">USD</option>
-              </select>
-            </div>
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Ghi chú giá</label>
-              <input
-                type="text"
-                name="notes"
-                value={form.notes}
-                onChange={handleChange}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2"
-                placeholder="VD: Bao VAT, chưa bao gồm phí..."
-              />
-            </div>
+          <h2 className="text-lg font-semibold mb-4">Giá giao dịch</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Input label="Giá" name="price" type="number" required />
+            <Select label="Đơn vị tiền" name="currency" options={[{ value: 'VND', label: 'VND' }, { value: 'USD', label: 'USD' }]} />
+            <Select label="Đơn vị tính" name="price_unit" options={[{ value: 'month', label: 'Tháng' }, { value: 'sqm', label: 'm²' }, { value: 'total', label: 'Tổng' }]} />
+            <Input label="Giá hiển thị" name="price_display" placeholder="VD: 35tr" />
+            <Input label="Tiền cọc" name="deposit" placeholder="VD: 2 tháng" />
+            <Input label="Hoa hồng" name="commission" placeholder="VD: 1/2" />
           </div>
         </div>
 
-        {/* Contact */}
+        {/* Chủ nhà & Quản lý */}
         <div className="bg-white rounded-lg p-6 shadow-sm">
-          <h2 className="text-lg font-semibold mb-4">Liên hệ</h2>
+          <h2 className="text-lg font-semibold mb-4">Thông tin chủ nhà</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Input label="Tên chủ" name="contact_name" placeholder="VD: A Quân" />
+            <Input label="SĐT chủ" name="contact_phone" placeholder="VD: 0787441111" />
+            <Input label="Người quản lý" name="manager_name" />
+            <Input label="SĐT quản lý" name="manager_phone" />
+          </div>
+        </div>
+
+        {/* Kinh doanh */}
+        <div className="bg-white rounded-lg p-6 shadow-sm">
+          <h2 className="text-lg font-semibold mb-4">Thông tin kinh doanh</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Select label="Phù hợp" name="business_type" options={BUSINESS_TYPES} />
+            <Input label="Hạn chế" name="restriction" placeholder="VD: Không ăn uống" />
+          </div>
+        </div>
+
+        {/* Description & Notes */}
+        <div className="bg-white rounded-lg p-6 shadow-sm">
+          <h2 className="text-lg font-semibold mb-4">Mô tả & Ghi chú</h2>
+          <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Tên liên hệ</label>
-              <input
-                type="text"
-                name="contact_name"
-                value={form.contact_name}
-                onChange={handleChange}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2"
-              />
+              <label className="block text-sm font-medium text-gray-700 mb-1">Hoa hồng (mô tả)</label>
+              <textarea name="description" value={form.description} onChange={handleChange} rows={3}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2" placeholder="VD: HH 1/2, điều kiện nhận..." />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Số điện thoại</label>
-              <input
-                type="text"
-                name="contact_phone"
-                value={form.contact_phone}
-                onChange={handleChange}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2"
-              />
+              <label className="block text-sm font-medium text-gray-700 mb-1">Ghi chú nội bộ</label>
+              <textarea name="notes" value={form.notes} onChange={handleChange} rows={4}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2" placeholder="VD: Chủ dễ làm việc, ưu tiên khách lâu dài..." />
             </div>
           </div>
         </div>
 
         {/* Location */}
         <div className="bg-white rounded-lg p-6 shadow-sm">
-          <h2 className="text-lg font-semibold mb-4">Vị trí (tùy chọn)</h2>
+          <h2 className="text-lg font-semibold mb-4">Vị trí</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Vĩ độ (Latitude)</label>
-              <input
-                type="number"
-                name="latitude"
-                value={form.latitude}
-                onChange={handleChange}
-                step="any"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2"
-                placeholder="VD: 10.762622"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Kinh độ (Longitude)</label>
-              <input
-                type="number"
-                name="longitude"
-                value={form.longitude}
-                onChange={handleChange}
-                step="any"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2"
-                placeholder="VD: 106.660172"
-              />
-            </div>
+            <Input label="Vĩ độ" name="latitude" type="number" step="any" placeholder="10.762622" />
+            <Input label="Kinh độ" name="longitude" type="number" step="any" placeholder="106.660172" />
           </div>
         </div>
 
-        {/* Description */}
+        {/* Status */}
         <div className="bg-white rounded-lg p-6 shadow-sm">
-          <h2 className="text-lg font-semibold mb-4">Mô tả</h2>
-          <textarea
-            name="description"
-            value={form.description}
-            onChange={handleChange}
-            rows={5}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2"
-            placeholder="Mô tả chi tiết về bất động sản..."
-          />
+          <h2 className="text-lg font-semibold mb-4">Trạng thái</h2>
+          <Select label="Trạng thái" name="status" options={STATUSES} />
         </div>
 
         {/* Images */}
@@ -426,60 +285,32 @@ export default function PropertyForm() {
                   <img src={img.image_url} alt="" className="w-full aspect-square object-cover rounded-lg" />
                   <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition rounded-lg flex items-center justify-center gap-2">
                     {!img.is_thumbnail && (
-                      <button
-                        type="button"
-                        onClick={() => handleSetThumbnail(img.id)}
-                        className="px-2 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600"
-                      >
-                        Ảnh chính
-                      </button>
+                      <button type="button" onClick={() => handleSetThumbnail(img.id)}
+                        className="px-2 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600">Ảnh chính</button>
                     )}
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteImage(img.id)}
-                      className="p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
-                    >
-                      <FiX size={14} />
-                    </button>
+                    <button type="button" onClick={() => handleDeleteImage(img.id)}
+                      className="p-1 bg-red-500 text-white rounded-full hover:bg-red-600"><FiX size={14} /></button>
                   </div>
                   {img.is_thumbnail && (
-                    <span className="absolute top-2 left-2 px-2 py-0.5 bg-blue-500 text-white text-xs rounded">
-                      Ảnh chính
-                    </span>
+                    <span className="absolute top-2 left-2 px-2 py-0.5 bg-blue-500 text-white text-xs rounded">Ảnh chính</span>
                   )}
                 </div>
               ))}
             </div>
             <label className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer">
-              <FiUpload />
-              {uploading ? 'Đang upload...' : 'Thêm ảnh'}
-              <input
-                type="file"
-                multiple
-                accept="image/*"
-                onChange={handleImageUpload}
-                className="hidden"
-                disabled={uploading}
-              />
+              <FiUpload />{uploading ? 'Đang upload...' : 'Thêm ảnh'}
+              <input type="file" multiple accept="image/*" onChange={handleImageUpload} className="hidden" disabled={uploading} />
             </label>
           </div>
         )}
 
         {/* Submit */}
         <div className="flex gap-4">
-          <button
-            type="submit"
-            disabled={saving}
-            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-          >
+          <button type="submit" disabled={saving}
+            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
             {saving ? 'Đang lưu...' : isEdit ? 'Cập nhật' : 'Tạo mới'}
           </button>
-          <Link
-            to="/admin"
-            className="px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50"
-          >
-            Hủy
-          </Link>
+          <Link to="/admin" className="px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50">Hủy</Link>
         </div>
       </form>
     </div>
