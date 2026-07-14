@@ -4,6 +4,7 @@ import { FiArrowLeft, FiCheck, FiTrash2, FiUpload, FiImage, FiPlus, FiX } from '
 import toast from 'react-hot-toast';
 import { previewImport, confirmImport, uploadImages } from '../services/api';
 import { compressImage } from '../utils/compressImage';
+import axios from 'axios';
 
 const SAMPLE = `68 Nguyễn Hữu Cảnh, QBT
 Diện tích: 4 x 12m
@@ -57,16 +58,24 @@ export default function ImportPage() {
       for (let i = 0; i < preview.data.length; i++) {
         const item = preview.data[i];
         if (item.imageFiles && item.imageFiles.length > 0 && propertyIds[i]) {
-          const formData = new FormData();
-          formData.append('property_id', propertyIds[i]);
+          const urls = [];
           for (const f of item.imageFiles) {
             const compressed = await compressImage(f, 800, 0.6);
-            formData.append('images', compressed);
+            const fd = new FormData();
+            fd.append('image', compressed);
+            try {
+              const { data } = await axios.post(`https://api.imgbb.com/1/upload?key=${import.meta.env.VITE_IMGBB_KEY}`, fd);
+              urls.push(data.data.url);
+            } catch (e) {
+              console.error('Upload to imgbb error:', e);
+            }
           }
-          try {
-            await uploadImages(formData);
-          } catch (e) {
-            console.error('Upload images error:', e);
+          if (urls.length > 0) {
+            try {
+              await uploadImages({ property_id: propertyIds[i], images: urls, is_thumbnail: 'true' });
+            } catch (e) {
+              console.error('Save images error:', e);
+            }
           }
         }
       }

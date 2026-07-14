@@ -2,13 +2,13 @@ import db from '../config/db.js';
 
 export const uploadImages = async (req, res) => {
   try {
-    const { property_id, is_thumbnail } = req.body;
+    const { property_id, is_thumbnail, images } = req.body;
 
     if (!property_id) {
       return res.status(400).json({ message: 'property_id là bắt buộc' });
     }
 
-    if (!req.files || req.files.length === 0) {
+    if (!images || images.length === 0) {
       return res.status(400).json({ message: 'Vui lòng chọn file ảnh' });
     }
 
@@ -20,15 +20,6 @@ export const uploadImages = async (req, res) => {
     });
     const isFirst = existing.rows[0].count === 0;
 
-    const images = req.files.map((file, idx) => {
-      const base64 = `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
-      return {
-        property_id: pid,
-        image_url: base64,
-        is_thumbnail: (isFirst && idx === 0) || is_thumbnail === 'true' ? 1 : 0
-      };
-    });
-
     if (is_thumbnail === 'true') {
       await db.execute({
         sql: 'UPDATE property_images SET is_thumbnail = 0 WHERE property_id = ?',
@@ -36,14 +27,16 @@ export const uploadImages = async (req, res) => {
       });
     }
 
-    for (const img of images) {
+    const imageUrls = Array.isArray(images) ? images : [images];
+    for (let idx = 0; idx < imageUrls.length; idx++) {
+      const thumb = (isFirst && idx === 0) || (is_thumbnail === 'true' && idx === 0) ? 1 : 0;
       await db.execute({
         sql: 'INSERT INTO property_images (property_id, image_url, is_thumbnail) VALUES (?, ?, ?)',
-        args: [img.property_id, img.image_url, img.is_thumbnail]
+        args: [pid, imageUrls[idx], thumb]
       });
     }
 
-    res.status(201).json({ message: 'Upload thành công', count: images.length });
+    res.status(201).json({ message: 'Upload thành công', count: imageUrls.length });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

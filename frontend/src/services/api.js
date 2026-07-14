@@ -14,9 +14,7 @@ export const updateStatus = (id, status) => API.patch(`/properties/${id}/status`
 export const getDistricts = () => API.get('/properties/districts');
 export const exportExcel = () => API.get('/properties/export/excel');
 
-export const uploadImages = (formData) => API.post('/upload', formData, {
-  headers: { 'Content-Type': 'multipart/form-data' }
-});
+export const uploadImages = (data) => API.post('/upload', data);
 export const deleteImage = (id) => API.delete(`/upload/${id}`);
 export const setThumbnail = (data) => API.put('/upload/thumbnail', data);
 

@@ -4,6 +4,7 @@ import { FiArrowLeft, FiUpload, FiX } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import { getPropertyById, createProperty, updateProperty, uploadImages, deleteImage, setThumbnail } from '../services/api';
 import { compressImage } from '../utils/compressImage';
+import axios from 'axios';
 
 const DISTRICTS = [
   'Quận 1', 'Quận 2', 'Quận 3', 'Quận 4', 'Quận 5', 'Quận 6', 'Quận 7',
@@ -113,16 +114,15 @@ export default function PropertyForm() {
 
     setUploading(true);
     try {
-      const formData = new FormData();
+      const uploadedUrls = [];
       for (const f of files) {
         const compressed = await compressImage(f, 800, 0.6);
-        formData.append('images', compressed);
+        const fd = new FormData();
+        fd.append('image', compressed);
+        const { data } = await axios.post(`https://api.imgbb.com/1/upload?key=${import.meta.env.VITE_IMGBB_KEY}`, fd);
+        uploadedUrls.push(data.data.url);
       }
-      formData.append('property_id', id);
-      if (images.length === 0) {
-        formData.append('is_thumbnail', 'true');
-      }
-      await uploadImages(formData);
+      await uploadImages({ property_id: id, images: uploadedUrls, is_thumbnail: images.length === 0 ? 'true' : undefined });
       toast.success('Upload thành công');
       navigate('/');
     } catch (error) {
