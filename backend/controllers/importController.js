@@ -56,6 +56,10 @@ function parsePropertyText(text) {
 
       if (lower.startsWith('diện tích:') || lower.startsWith('dt:')) {
         const val = line.split(':').slice(1).join(':').trim();
+        const parenMatch = val.match(/\((.*?)\)/);
+        if (parenMatch) {
+          property.notes = (property.notes ? property.notes + ' | ' : '') + parenMatch[1].trim();
+        }
         const xyMatch = val.match(/([\d.,]+)\s*[xX×]\s*([\d.,]+)/);
         const areaMatch = val.match(/([\d.,]+)\s*m²/);
         if (xyMatch) {
@@ -71,7 +75,12 @@ function parsePropertyText(text) {
           property.area = property.width * property.length;
         }
       } else if (lower.startsWith('kết cấu:') || lower.startsWith('kc:') || lower.startsWith('kt:')) {
-        property.structure = line.split(':').slice(1).join(':').trim();
+        const structStr = line.split(':').slice(1).join(':').trim();
+        const structParen = structStr.match(/\((.*?)\)/);
+        if (structParen) {
+          property.notes = (property.notes ? property.notes + ' | ' : '') + structParen[1].trim();
+        }
+        property.structure = structStr;
       } else if (lower.startsWith('giá:') || lower.startsWith('gia:')) {
         const priceStr = line.split(':').slice(1).join(':').trim();
         const noteMatch = priceStr.match(/\((.*?)\)/);
@@ -94,6 +103,10 @@ function parsePropertyText(text) {
         const cocMatch = priceStr.match(/c[oọ]c[:\s]*([\w\d\s]+)/i);
         if (cocMatch) {
           property.notes = (property.notes ? property.notes + ' | ' : '') + cocMatch[0].trim();
+        }
+        const tlMatch = priceStr.match(/\b(TL)\b/i);
+        if (tlMatch) {
+          property.notes = (property.notes ? property.notes + ' | ' : '') + 'TL';
         }
         if (lower.includes('usd') || lower.includes('$')) {
           property.currency = 'USD';
@@ -118,22 +131,42 @@ function parsePropertyText(text) {
       } else if (lower.startsWith('cọc:') || lower.startsWith('coc:')) {
         const cocStr = line.split(':').slice(1).join(':').trim();
         property.notes = (property.notes ? property.notes + ' | ' : '') + 'Cọc: ' + cocStr;
+      } else if (lower.startsWith('phí:') || lower.startsWith('phi:')) {
+        const phiStr = line.split(':').slice(1).join(':').trim();
+        property.description = (property.description ? property.description + ' | ' : '') + 'HH: ' + phiStr;
+      } else if (lower.startsWith('giá sang:') || lower.startsWith('gia sang:')) {
+        const sangStr = line.split(':').slice(1).join(':').trim();
+        property.notes = (property.notes ? property.notes + ' | ' : '') + 'Giá sang: ' + sangStr;
       } else if (lower.startsWith('liên hệ:') || lower.startsWith('lh:') || lower.startsWith('lien he:')) {
         const contactStr = line.split(':').slice(1).join(':').trim();
-        const phoneMatch = contactStr.match(/(0\d{9,10})/);
-        if (phoneMatch) {
+        const phones = [...contactStr.matchAll(/(0\d{9,10})/g)].map(m => m[1]);
+        if (phones.length > 0) {
+          property.contact_phone = phones[0];
+          const afterFirst = contactStr.substring(contactStr.indexOf(phones[0]) + phones[0].length).trim();
+          const nameMatch = afterFirst.match(/(.*?)\s*\(.*?\)|(.+)/);
+          if (nameMatch) {
+            let name = (nameMatch[1] || nameMatch[2] || '').replace(/\(.*?\)/g, '').trim();
+            name = name.replace(/^(anh|chị|a\.?|ac\.?|chủ quán|quản lý|HTMG)\s*/i, '').trim();
+            property.contact_name = name || '';
+          }
+        }
+        const noteMatch = contactStr.match(/\((.*?)\)/g);
+        if (noteMatch) {
+          const notes = noteMatch.map(n => n.replace(/[()]/g, '')).join(' | ');
+          property.notes = (property.notes ? property.notes + ' | ' : '') + notes;
+        }
+        if (phones.length > 1) {
+          const extra = contactStr.substring(contactStr.indexOf(phones[1])).trim();
+          property.notes = (property.notes ? property.notes + ' | ' : '') + extra;
+        }
+      } else if (/^0\d{9,10}/.test(line)) {
+        const phoneMatch = line.match(/(0\d{9,10})/);
+        if (phoneMatch && !property.contact_phone) {
           property.contact_phone = phoneMatch[1];
         }
-        const nameMatch = contactStr.match(/\d{10,11}\s+(.+)/);
-        if (nameMatch) {
-          let name = nameMatch[1].replace(/\(.*?\)/g, '').trim();
-          name = name.replace(/^(anh|chị|a\.?|ac\.?)\s*/i, '').trim();
-          property.contact_name = name || '';
-        }
-        const noteMatch = contactStr.match(/\((.*?)\)/);
-        if (noteMatch) {
-          property.description = noteMatch[1].trim();
-        }
+        property.notes = (property.notes ? property.notes + ' | ' : '') + line;
+      } else if (/^\(.*\)$/.test(line)) {
+        property.notes = (property.notes ? property.notes + ' | ' : '') + line;
       } else if (!property.address) {
         let addr = line;
         let district = '';
