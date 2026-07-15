@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { FiSearch, FiMapPin, FiHome, FiX } from 'react-icons/fi';
 import { getProperties } from '../services/api';
 
@@ -39,33 +39,40 @@ const formatPrice = (price, currency) => {
 };
 
 export default function HomePage() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [properties, setProperties] = useState([]);
   const [loading, setLoading] = useState(true);
   const [pagination, setPagination] = useState({});
   const [filters, setFilters] = useState({
-    page: 1,
+    page: Number(searchParams.get('page')) || 1,
     limit: 20,
-    search: '',
-    district: '',
-    listing_type: '',
-    status: '',
-    min_price: '',
-    max_price: '',
-    min_area: '',
-    max_area: ''
+    search: searchParams.get('search') || '',
+    district: searchParams.get('district') || '',
+    listing_type: searchParams.get('listing_type') || '',
+    status: searchParams.get('status') || '',
+    min_price: searchParams.get('min_price') || '',
+    max_price: searchParams.get('max_price') || '',
+    min_area: searchParams.get('min_area') || '',
+    max_area: searchParams.get('max_area') || ''
   });
 
   const activeFilterCount = ['district', 'listing_type', 'status', 'min_price', 'max_price', 'min_area', 'max_area']
     .filter(k => filters[k] !== '').length;
+
+  const updateParams = (newFilters) => {
+    const params = {};
+    Object.entries(newFilters).forEach(([k, v]) => {
+      if (v !== '' && v !== null && v !== undefined && k !== 'limit') params[k] = v;
+    });
+    setSearchParams(params);
+  };
 
   const fetchData = async () => {
     setLoading(true);
     try {
       const params = {};
       Object.entries(filters).forEach(([key, val]) => {
-        if (val !== '' && val !== null && val !== undefined) {
-          params[key] = val;
-        }
+        if (val !== '' && val !== null && val !== undefined) params[key] = val;
       });
       const { data } = await getProperties(params);
       setProperties(data.data);
@@ -79,17 +86,19 @@ export default function HomePage() {
 
   useEffect(() => {
     fetchData();
-  }, [filters.page]);
+  }, [filters]);
+
+  useEffect(() => {
+    updateParams(filters);
+  }, [filters]);
 
   const handleSearch = (e) => {
     e.preventDefault();
     setFilters(f => ({ ...f, page: 1 }));
-    setTimeout(fetchData, 0);
   };
 
   const handleFilterChange = (key, value) => {
     setFilters(f => ({ ...f, [key]: value, page: 1 }));
-    setTimeout(fetchData, 0);
   };
 
   const clearFilters = () => {
@@ -99,7 +108,6 @@ export default function HomePage() {
       min_price: '', max_price: '',
       min_area: '', max_area: ''
     });
-    setTimeout(fetchData, 0);
   };
 
   return (

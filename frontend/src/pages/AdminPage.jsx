@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { FiPlus, FiEdit2, FiTrash2, FiDownload, FiSearch, FiUpload } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import { getProperties, deleteProperty, updateStatus, exportExcel } from '../services/api';
@@ -21,11 +21,12 @@ const STATUS_OPTIONS = [
 ];
 
 export default function AdminPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [properties, setProperties] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState(searchParams.get('search') || '');
   const [pagination, setPagination] = useState({});
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useState(Number(searchParams.get('page')) || 1);
 
   const fetchData = async () => {
     setLoading(true);
@@ -41,6 +42,13 @@ export default function AdminPage() {
   };
 
   useEffect(() => { fetchData(); }, [page]);
+
+  useEffect(() => {
+    const params = {};
+    if (page > 1) params.page = page;
+    if (search) params.search = search;
+    setSearchParams(params);
+  }, [page, search]);
 
   const handleDelete = async (id, title) => {
     if (!confirm(`Xóa "${title}"?`)) return;
