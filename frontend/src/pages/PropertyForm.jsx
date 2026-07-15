@@ -68,7 +68,13 @@ export default function PropertyForm() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setForm(f => ({ ...f, [name]: value }));
+    setForm(f => {
+      const next = { ...f, [name]: value };
+      if ((name === 'width' || name === 'length') && next.width && next.length) {
+        next.area = (Number(next.width) * Number(next.length)).toString();
+      }
+      return next;
+    });
   };
 
   const handleSubmit = async (e) => {
@@ -82,6 +88,7 @@ export default function PropertyForm() {
       if (isEdit) {
         await updateProperty(id, form);
         toast.success('Cập nhật thành công');
+        navigate('/admin');
       } else {
         const { data } = await createProperty(form);
         toast.success('Tạo thành công');
@@ -110,7 +117,7 @@ export default function PropertyForm() {
       }
       await uploadImages({ property_id: id, images: uploadedUrls, is_thumbnail: images.length === 0 ? 'true' : undefined });
       toast.success('Upload thành công');
-      navigate('/');
+      navigate('/admin');
     } catch (error) {
       toast.error('Upload thất bại');
     } finally {
@@ -137,12 +144,6 @@ export default function PropertyForm() {
       toast.success('Đã đặt làm ảnh đại diện');
     } catch (error) {
       toast.error('Thất bại');
-    }
-  };
-
-  const calculateArea = () => {
-    if (form.width && form.length) {
-      setForm(f => ({ ...f, area: (Number(f.width) * Number(f.length)).toString() }));
     }
   };
 
